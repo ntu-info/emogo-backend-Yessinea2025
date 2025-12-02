@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, Response, StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import os
 import json
@@ -28,9 +28,24 @@ app.add_middleware(
 )
 
 # MongoDB 連接設定
-# 可以從環境變數讀取，或使用預設值
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "emogo_database")
+
+# 台灣時區 (UTC+8)
+TW_TZ = timezone(timedelta(hours=8))
+
+def to_tw_time(dt):
+    """將 datetime 轉換為台灣時間字串"""
+    if dt is None:
+        return "N/A"
+    if isinstance(dt, str):
+        return dt
+    # 如果是 naive datetime，假設是 UTC
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    # 轉換為台灣時間
+    tw_time = dt.astimezone(TW_TZ)
+    return tw_time.strftime("%Y-%m-%d %H:%M:%S")
 
 # MongoDB 連接會在 startup 事件中初始化
 @app.on_event("startup")
@@ -309,9 +324,7 @@ async def export_sentiments_csv():
     
     # 寫入資料
     for s in sentiments:
-        timestamp = s.get("timestamp", "")
-        if isinstance(timestamp, datetime):
-            timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = to_tw_time(s.get("timestamp"))  # 台灣時間
         
         writer.writerow([
             s.get('emotion', ''),
@@ -342,9 +355,7 @@ async def preview_sentiments():
     
     rows = ""
     for s in sentiments:
-        timestamp = s.get("timestamp", "N/A")
-        if isinstance(timestamp, datetime):
-            timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = to_tw_time(s.get("timestamp"))  # 台灣時間
         rows += f"""
         <tr>
             <td>{s.get('emotion', 'N/A')}</td>
@@ -374,7 +385,7 @@ async def preview_sentiments():
                 <th>情緒</th>
                 <th>心情評分</th>
                 <th>備註</th>
-                <th>時間</th>
+                <th>時間 (台灣時區)</th>
             </tr>
             {rows}
         </table>
@@ -411,9 +422,7 @@ async def export_gps_csv():
     
     # 寫入資料
     for g in gps_data:
-        timestamp = g.get("timestamp", "")
-        if isinstance(timestamp, datetime):
-            timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = to_tw_time(g.get("timestamp"))  # 台灣時間
         
         writer.writerow([
             g.get('latitude', ''),
@@ -443,9 +452,7 @@ async def preview_gps():
     
     rows = ""
     for g in gps_data:
-        timestamp = g.get("timestamp", "N/A")
-        if isinstance(timestamp, datetime):
-            timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = to_tw_time(g.get("timestamp"))  # 台灣時間
         rows += f"""
         <tr>
             <td>{g.get('latitude', 'N/A')}</td>
@@ -473,7 +480,7 @@ async def preview_gps():
             <tr>
                 <th>緯度</th>
                 <th>經度</th>
-                <th>時間</th>
+                <th>時間 (台灣時區)</th>
             </tr>
             {rows}
         </table>
@@ -488,11 +495,8 @@ async def export_vlogs():
     vlogs = await app.mongodb["vlogs"].find().to_list(1000)
     
     rows = ""
-    checkbox_list = ""
     for v in vlogs:
-        upload_time = v.get("upload_time", "N/A")
-        if isinstance(upload_time, datetime):
-            upload_time = upload_time.strftime("%Y-%m-%d %H:%M:%S")
+        upload_time = to_tw_time(v.get("upload_time"))  # 台灣時間
         
         size_mb = v.get("size", 0) / (1024 * 1024)
         filename = v.get('filename', '')
@@ -561,7 +565,7 @@ async def export_vlogs():
                 <th>檔名</th>
                 <th>描述</th>
                 <th>大小</th>
-                <th>上傳時間</th>
+                <th>上傳時間 (台灣時區)</th>
                 <th>操作</th>
             </tr>
             {rows}
@@ -670,35 +674,52 @@ async def download_multiple_vlogs(filenames: str):
 
 @app.get("/export/all")
 async def export_all():
-    """在網頁上查看所有資料（JSON 格式）"""
+    """在網頁上查看所有資料（JSON 格式）- 時間已轉換為台灣時區"""
     sentiments = await app.mongodb["sentiments"].find().to_list(1000)
     gps_data = await app.mongodb["gps_coordinates"].find().to_list(1000)
     vlogs = await app.mongodb["vlogs"].find().to_list(1000)
     
-    # 轉換資料格式
+    # 轉換資料格式 - 所有時間轉換為台灣時區
     for s in sentiments:
         s["_id"] = str(s["_id"])
         if "timestamp" in s and s["timestamp"]:
-            s["timestamp"] = s["timestamp"].isoformat()
+            # 轉換為台灣時間
+            dt = s["timestamp"]
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tw_dt = dt.astimezone(TW_TZ)
+            s["timestamp"] = tw_dt.strftime("%Y-%m-%d %H:%M:%S")
     
     for g in gps_data:
         g["_id"] = str(g["_id"])
         if "timestamp" in g and g["timestamp"]:
-            g["timestamp"] = g["timestamp"].isoformat()
+            # 轉換為台灣時間
+            dt = g["timestamp"]
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tw_dt = dt.astimezone(TW_TZ)
+            g["timestamp"] = tw_dt.strftime("%Y-%m-%d %H:%M:%S")
         # 移除 accuracy 欄位
         g.pop("accuracy", None)
     
     for v in vlogs:
         v["_id"] = str(v["_id"])
         if "upload_time" in v and v["upload_time"]:
-            v["upload_time"] = v["upload_time"].isoformat()
+            # 轉換為台灣時間
+            dt = v["upload_time"]
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tw_dt = dt.astimezone(TW_TZ)
+            v["upload_time"] = tw_dt.strftime("%Y-%m-%d %H:%M:%S")
     
     # 返回 JSON（在網頁上顯示）
     return JSONResponse(content={
         "sentiments": sentiments,
         "gps_coordinates": gps_data,
         "vlogs": vlogs,
-        "export_time": datetime.now().isoformat(),
+        "export_time": datetime.now(TW_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+        "timezone": "Asia/Taipei (UTC+8)",
+        "note": "所有時間已轉換為台灣時區 (UTC+8)",
         "total_records": {
             "sentiments": len(sentiments),
             "gps": len(gps_data),
@@ -717,35 +738,52 @@ async def clear_all_data():
 
 @app.get("/export/all/download")
 async def download_all():
-    """下載所有資料為 JSON 檔案"""
+    """下載所有資料為 JSON 檔案 - 時間已轉換為台灣時區"""
     sentiments = await app.mongodb["sentiments"].find().to_list(1000)
     gps_data = await app.mongodb["gps_coordinates"].find().to_list(1000)
     vlogs = await app.mongodb["vlogs"].find().to_list(1000)
     
-    # 轉換資料格式
+    # 轉換資料格式 - 所有時間轉換為台灣時區
     for s in sentiments:
         s["_id"] = str(s["_id"])
         if "timestamp" in s and s["timestamp"]:
-            s["timestamp"] = s["timestamp"].isoformat()
+            # 轉換為台灣時間
+            dt = s["timestamp"]
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tw_dt = dt.astimezone(TW_TZ)
+            s["timestamp"] = tw_dt.strftime("%Y-%m-%d %H:%M:%S")
     
     for g in gps_data:
         g["_id"] = str(g["_id"])
         if "timestamp" in g and g["timestamp"]:
-            g["timestamp"] = g["timestamp"].isoformat()
+            # 轉換為台灣時間
+            dt = g["timestamp"]
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tw_dt = dt.astimezone(TW_TZ)
+            g["timestamp"] = tw_dt.strftime("%Y-%m-%d %H:%M:%S")
         # 移除 accuracy 欄位
         g.pop("accuracy", None)
     
     for v in vlogs:
         v["_id"] = str(v["_id"])
         if "upload_time" in v and v["upload_time"]:
-            v["upload_time"] = v["upload_time"].isoformat()
+            # 轉換為台灣時間
+            dt = v["upload_time"]
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            tw_dt = dt.astimezone(TW_TZ)
+            v["upload_time"] = tw_dt.strftime("%Y-%m-%d %H:%M:%S")
     
     # 建立 JSON 內容
     data = {
         "sentiments": sentiments,
         "gps_coordinates": gps_data,
         "vlogs": vlogs,
-        "export_time": datetime.now().isoformat(),
+        "export_time": datetime.now(TW_TZ).strftime("%Y-%m-%d %H:%M:%S"),
+        "timezone": "Asia/Taipei (UTC+8)",
+        "note": "所有時間已轉換為台灣時區 (UTC+8)",
         "total_records": {
             "sentiments": len(sentiments),
             "gps": len(gps_data),
