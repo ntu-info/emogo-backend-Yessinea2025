@@ -28,39 +28,9 @@ Or simply click:
 
 Thanks to [Harish](https://harishgarg.com) for the [inspiration to create a FastAPI quickstart for Render](https://twitter.com/harishkgarg/status/1435084018677010434) and for some sample code!  
 
-
-# 📱 前端 App 測試
-
-## Android APK 下載
-
-### APK 下載連結： https://expo.dev/accounts/yessinea/projects/expo-router-mwe/builds/330e4af7-1ab5-4f3a-9229-fbceed098600
-
-## 使用說明
-
-1. 選擇心情
-   - 點擊 1-5 顆心來評分
-   - 1 = 很難過，5 = 很開心
-
-2. 輸入備註（可選）
-   - 記錄當下的想法或發生的事
-
-3. 點擊「下一步」
-
-4. 錄製影片
-   - 會自動開始錄影（1 秒）
-   - 錄製完成後自動上傳
-
-5. 查看資料
-   - 訪問：https://emogo-backend-yessinea2025.onrender.com/export
-   - 可以看到剛上傳的資料
-
-## ⚠️ 注意事項
-- ### 首次連接較慢：Render Free Plan 可能需要 30-60 秒喚醒
-
-
 # EmoGo 後端 API
 
-情緒日記應用的後端服務 - 使用 FastAPI + MongoDB Atlas
+情緒日記應用的後端服務 - 使用 FastAPI + MongoDB Atlas + GridFS
 
 ---
 
@@ -68,84 +38,201 @@ Thanks to [Harish](https://harishgarg.com) for the [inspiration to create a Fast
 
 **後端部署網址：** https://emogo-backend-yessinea2025.onrender.com
 
-**📊 資料中心頁面：** https://emogo-backend-yessinea2025.onrender.com/export
+**📊 資料匯出頁面：** https://emogo-backend-yessinea2025.onrender.com/export  
 
 ---
 
-## 📦 資料類型
+## 📱 前端 App
 
-在資料匯出頁面可以查看和下載以下三種資料：
+### Android APK 下載
+
+**下載連結：** https://expo.dev/accounts/yessinea/projects/expo-router-mwe/builds/2aedaf10-163f-483d-baa6-8b25115f69ed
+
+### 使用說明
+
+1. **選擇心情** - 點擊 1-5 顆心評分（1 = 很難過，5 = 很開心）
+2. **輸入備註**（可選）- 記錄當下的想法
+3. **點擊「下一步」**
+4. **錄製影片** - 自動錄影 1 秒並上傳
+5. **查看資料** - 訪問 https://emogo-backend-yessinea2025.onrender.com/export
+
+### ⚠️ App 使用注意事項
+
+**首次連接較慢：** Render Free Plan 可能需要 30-60 秒喚醒
+
+**建議測試流程：**
+1. 先在瀏覽器訪問 `/export` 頁面（喚醒伺服器）
+2. 等待頁面完全載入（約 30-60 秒）
+3. 立即使用 App 上傳資料
+4. 上傳應該會成功 ✅
+
+---
+
+## 📦 資料類型與匯出
 
 ### 1. 😊 情緒資料 (Sentiments)
-- 包含：情緒類型、心情評分 (1-5)、用戶備註、時間戳記
-- 下載格式：CSV、JSON
-- 預覽頁面：https://emogo-backend-yessinea2025.onrender.com/export/sentiments/preview
 
-### 2. 📍 GPS 座標 (GPS Coordinates)
-- 包含：緯度、經度、時間戳記
-- 下載格式：CSV、JSON
-- 預覽頁面：https://emogo-backend-yessinea2025.onrender.com/export/gps/preview
+**包含內容：**
+- 情緒類型（very_sad, sad, neutral, happy, very_happy）
+- 心情評分 (1-5)
+- 用戶備註
+- 時間戳記（台灣時區 UTC+8）
 
-### 3. 🎥 影片日記 (Vlogs)
-- 包含：影片檔案、檔案大小、上傳時間、描述
-- 下載格式：單一影片、批次 ZIP
-- 列表頁面：https://emogo-backend-yessinea2025.onrender.com/export/vlogs
+**匯出方式：**
+- CSV 下載：https://emogo-backend-yessinea2025.onrender.com/export/sentiments/csv
+- 網頁預覽：https://emogo-backend-yessinea2025.onrender.com/export/sentiments/preview
 
 ---
 
-## 🎯 API 端點
+### 2. 📍 GPS 座標 (GPS Coordinates)
+
+**包含內容：**
+- 緯度（latitude）
+- 經度（longitude）
+- 時間戳記（台灣時區 UTC+8）
+
+**匯出方式：**
+- CSV 下載：https://emogo-backend-yessinea2025.onrender.com/export/gps/csv
+- 網頁預覽：https://emogo-backend-yessinea2025.onrender.com/export/gps/preview
+
+---
+
+### 3. 🎥 影片日記 (Vlogs)
+
+**包含內容：**
+- 影片檔案（MP4 格式）
+- 檔案大小
+- 上傳時間（台灣時區 UTC+8）
+- 影片描述
+
+**匯出方式：**
+- 影片列表：https://emogo-backend-yessinea2025.onrender.com/export/vlogs
+- 單一下載：點擊列表中的「下載」按鈕
+- 批次下載：選取多個影片後下載 ZIP
+- 全部下載：一鍵下載所有影片的 ZIP
+
+---
+
+## 🎥 影片儲存架構（GridFS）
+
+### MongoDB GridFS 永久儲存
+
+**採用技術：** MongoDB GridFS
+
+**特點：**
+- ✅ 影片檔案永久保存在 MongoDB 資料庫中
+- ✅ 不受 Render 伺服器重啟影響
+- ✅ 不受 Render 休眠影響
+- ✅ 影片下載功能永久可用
+- ✅ 與資料庫資料享有相同的持久性保證
+
+**資料庫結構：**
+```
+emogo_database
+├── sentiments           # 情緒資料 collection
+├── gps_coordinates      # GPS 座標 collection
+├── vlogs                # 影片元資料 collection
+├── fs.files            # GridFS - 檔案資訊
+└── fs.chunks           # GridFS - 檔案內容（分塊）
+```
+---
+
+## 🎯 API 端點完整列表
+
+### 基本資訊
+- `GET /` - API 說明和端點列表
 
 ### 資料上傳
 - `POST /sentiments` - 上傳情緒資料
 - `POST /gps` - 上傳 GPS 座標
-- `POST /vlogs` - 上傳影片檔案
+- `POST /vlogs` - 上傳影片（自動存入 GridFS）
 
-### 資料匯出
-- `GET /export` - 📊 **資料中心**（主要入口）
+### 資料匯出與下載
+- `GET /export` - 📊 **資料中心**（主要入口，TA 從這裡開始）
 - `GET /export/sentiments/csv` - 下載情緒資料 CSV
-- `GET /export/sentiments/preview` - 預覽情緒資料
+- `GET /export/sentiments/preview` - 網頁預覽情緒資料
 - `GET /export/gps/csv` - 下載 GPS 資料 CSV
-- `GET /export/gps/preview` - 預覽 GPS 資料
-- `GET /export/vlogs` - 查看影片列表和下載
-- `GET /export/all` - 查看完整資料（JSON）
+- `GET /export/gps/preview` - 網頁預覽 GPS 資料
+- `GET /export/vlogs` - 影片列表（含下載按鈕）
+- `GET /vlogs/{filename}` - 下載特定影片（從 GridFS）
+- `GET /export/vlogs/download-all` - 下載所有影片（ZIP）
+- `GET /export/vlogs/download-multiple` - 下載選取的影片（ZIP）
+- `GET /export/all` - 查看完整資料（JSON 格式）
 - `GET /export/all/download` - 下載完整資料（JSON 檔案）
+
+### 資料管理
+- `POST /clear_all_data` - 清空所有資料（含 GridFS，需二次確認）
 
 ---
 
 ## 🗄️ 資料庫架構
 
-**資料庫：** MongoDB Atlas  
-**資料庫名稱：** emogo_database
+**資料庫平台：** MongoDB Atlas (雲端)  
+**資料庫名稱：** emogo_database  
+**連接方式：** MongoDB URI (使用 Motor 異步驅動)
 
-### Collections
+### Collections 結構
 
 #### sentiments
 ```json
 {
+  "_id": "ObjectId",
   "emotion": "very_happy",
   "score": 5,
   "note": "今天天氣很好",
-  "timestamp": "2024-12-02 18:30:00"
+  "timestamp": "2024-12-02T10:30:00.000Z"
 }
 ```
 
 #### gps_coordinates
 ```json
 {
+  "_id": "ObjectId",
   "latitude": 24.7936,
   "longitude": 120.9960,
-  "timestamp": "2024-12-02 18:30:00"
+  "timestamp": "2024-12-02T10:30:00.000Z"
 }
 ```
 
 #### vlogs
 ```json
 {
+  "_id": "ObjectId",
+  "file_id": "GridFS_ObjectId",
   "filename": "20241202_183000_video.mp4",
   "original_filename": "video.mp4",
   "size": 1048576,
   "description": "今天的心情記錄",
-  "upload_time": "2024-12-02 18:30:00"
+  "upload_time": "2024-12-02T10:30:00.000Z",
+  "storage": "gridfs"
+}
+```
+
+#### fs.files (GridFS)
+```json
+{
+  "_id": "ObjectId",
+  "length": 1048576,
+  "chunkSize": 261120,
+  "uploadDate": "2024-12-02T10:30:00.000Z",
+  "filename": "20241202_183000_video.mp4",
+  "metadata": {
+    "original_filename": "video.mp4",
+    "content_type": "video/mp4",
+    "description": "今天的心情記錄",
+    "upload_time": "2024-12-02T10:30:00.000Z",
+    "size": 1048576
+  }
+}
+```
+
+#### fs.chunks (GridFS)
+```json
+{
+  "_id": "ObjectId",
+  "files_id": "GridFS_ObjectId",
+  "n": 0,
+  "data": "Binary"
 }
 ```
 
@@ -153,50 +240,22 @@ Thanks to [Harish](https://harishgarg.com) for the [inspiration to create a Fast
 
 ## 🛠️ 技術架構
 
+### 後端技術
 - **後端框架：** FastAPI 0.115.5
-- **Web 伺服器：** Uvicorn 0.32.1
-- **資料庫驅動：** Motor 3.6.0 (Async MongoDB)
-- **資料庫：** MongoDB Atlas (雲端)
-- **部署平台：** Render (Free Plan)
+- **ASGI 伺服器：** Uvicorn 0.32.1
+- **MongoDB 驅動：** Motor 3.6.0 (Async)
+- **檔案處理：** python-multipart 0.0.18
+- **環境變數：** python-dotenv 1.0.1
+
+### 資料庫與儲存
+- **資料庫：** MongoDB Atlas (Free Tier)
+- **影片儲存：** MongoDB GridFS
+- **時區處理：** UTC 儲存，顯示時轉換為 UTC+8
+
+### 部署環境
+- **平台：** Render (Free Plan)
 - **程式語言：** Python 3.13
-
----
-
-## 💻 本地開發
-
-### 環境需求
-```bash
-Python 3.12+
-pip
-```
-
-### 安裝步驟
-
-1. Clone 專案
-```bash
-git clone https://github.com/ntu-info/emogo-backend-Yessinea2025.git
-cd emogo-backend-Yessinea2025
-```
-
-2. 安裝套件
-```bash
-pip install -r requirements.txt
-```
-
-3. 設定環境變數
-
-建立 `.env` 檔案：
-```bash
-MONGODB_URI=mongodb+srv://your_username:your_password@cluster0.xxxxx.mongodb.net/
-DB_NAME=emogo_database
-```
-
-4. 啟動伺服器
-```bash
-python main.py
-```
-
-伺服器會在 http://localhost:8000 啟動
+- **地區：** 自動選擇
 
 ---
 
@@ -204,88 +263,79 @@ python main.py
 
 ```
 emogo-backend-Yessinea2025/
-├── main.py              # 主程式（FastAPI 應用）
+├── main.py              # FastAPI 主程式（含 GridFS）
 ├── requirements.txt     # Python 套件清單
-├── .env                 # 環境變數（不上傳到 Git）
+├── .env                 # 環境變數（本地開發，不上傳）
 ├── .gitignore           # Git 忽略清單
-├── README.md            # 專案說明文件
-└── uploads/             # 上傳的影片（不上傳到 Git）
-    └── vlogs/           # 影片檔案存放處
+├── README.md            # 本文件
+└── uploads/             # （已棄用，使用 GridFS 取代）
 ```
+---
+
+## ⚠️ Render Free Plan 特性
+
+### 服務休眠機制
+
+**休眠條件：**
+- 15 分鐘無任何請求
+
+**喚醒時間：**
+- 首次請求需要 30-60 秒喚醒
+
+**影響：**
+- 首次訪問較慢
+- App 上傳可能 timeout
+
+**解決方案：**
+- 前端實作了 90 秒 timeout
+- 自動重試機制（最多 2 次）
+- 建議先訪問網頁喚醒伺服器
+
+### 檔案系統限制
+
+**Render Free Plan：**
+- ❌ 沒有持久化檔案系統
+- ❌ 重啟後本地檔案會消失
+
+**我們的解決方案：**
+- ✅ 使用 MongoDB GridFS 儲存影片
+- ✅ 所有檔案永久保存在資料庫
+- ✅ 完全不依賴 Render 的檔案系統
 
 ---
 
-## ⚠️ 注意事項
-
-### 時區設定
-所有時間顯示為**台灣時區 (UTC+8)**：
-- CSV 匯出
-- 網頁預覽
-- JSON 匯出
-
-資料庫內部儲存為 UTC，顯示時自動轉換。
-
-### Render Free Plan 限制
-
-**檔案儲存：**
-- 影片檔案為**暫時性儲存**
-- 重新部署或休眠後會清空
-- 影片的**元資料**（檔名、大小、上傳時間）永久保存在 MongoDB
-- 情緒和 GPS 資料永久保存在 MongoDB
-
-**服務狀態：**
-- 15 分鐘無活動會進入休眠
-- 首次訪問需要 30-60 秒喚醒時間
-
----
-
-## 🧪 測試方式
-
-### 1. 測試資料匯出頁面
-```
-訪問：https://emogo-backend-yessinea2025.onrender.com/export
-應該看到：情緒、GPS、影片的筆數統計和下載按鈕
-```
-
-### 2. 測試 CSV 下載
-```
-點擊「下載 CSV」按鈕
-應該下載包含中文的 CSV 檔案（UTF-8 with BOM）
-```
-
-### 3. 測試影片下載
-```
-訪問影片列表頁面
-應該可以下載個別影片或批次打包下載
-```
-
-### 4. 使用 App 上傳測試
-```
-1. 在 EmoGo App 選擇心情
-2. 輸入備註
-3. 錄製影片
-4. 上傳到雲端
-5. 在 /export 頁面確認資料出現
-```
-
----
-
-## 📊 功能特色
+## 📊 功能特色總結
 
 ### ✨ 資料匯出功能
-- ✅ CSV 格式匯出（支援中文）
+- ✅ CSV 格式匯出（UTF-8 with BOM，支援中文）
 - ✅ JSON 格式匯出
+- ✅ 影片單一下載
 - ✅ 影片批次下載（ZIP）
-- ✅ 網頁預覽資料
+- ✅ 一鍵下載所有資料
+- ✅ 網頁即時預覽
 - ✅ 時區自動轉換（UTC+8）
 
 ### 🎨 使用者介面
 - ✅ 美觀的資料匯出中心
 - ✅ 統計資料即時顯示
-- ✅ 一鍵批次操作
+- ✅ 清晰的操作按鈕
 - ✅ 響應式設計
+- ✅ GridFS 永久儲存說明
 
-### 🔒 資料管理
-- ✅ MongoDB 雲端儲存
+### 🔒 資料安全與管理
+- ✅ MongoDB Atlas 雲端儲存
+- ✅ GridFS 永久檔案儲存
 - ✅ 資料備份與匯出
-- ✅ 批次清空功能（帶確認）
+- ✅ 批次清空功能（二次確認保護）
+
+### 🚀 效能與可靠性
+- ✅ 異步 MongoDB 操作（Motor）
+- ✅ GridFS 分塊儲存大檔案
+- ✅ 自動重試機制（前端）
+- ✅ 延長 timeout 適應休眠
+- ✅ 影片永久可用（不受重啟影響）
+
+---
+
+**最後更新：** 2024/12/04  
+**版本：** 1.0.0 (GridFS)
